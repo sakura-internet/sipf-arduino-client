@@ -28,6 +28,8 @@
 #include <LTE.h>
 #include <ArduinoHttpClient.h>
 
+#include <File.h>
+
 // APN name
 #define APP_LTE_APN "sakura" // replace your APN
 
@@ -131,10 +133,14 @@ typedef struct
 
 
 const char auth_server[] = "auth.sipf.iot.sakura.ad.jp";
-const char auth_path[] = "/v0/session_key";
+const char auth_path[]   = "/v0/session_key";
 
 const char data_server[] = "da.sipf.iot.sakura.ad.jp";
-const char data_path[] = "/v0";
+const char data_path[]   = "/v0";
+
+const char file_server[] = "file.sipf.iot.sakura.ad.jp";
+const char file_path[]   = "/v1/files/";
+const char file_comple[]   = "/complete/";
 
 class SpifClient
 {
@@ -142,12 +148,15 @@ class SpifClient
 public:
 
   void begin(LTEClient*, int);
+  void begin(LTETLSClient*, int);
   void end();
 
   bool authorization();
 
   bool upload(uint64_t, SipfObjectObject*, uint8_t);
   bool receiveResult(int64_t*);
+
+  bool SipfFileRequestUploadURL(File&, String);
 
 private:
 
@@ -157,7 +166,10 @@ private:
   int port = 80; // port 80 is the default for HTTP
 
   LTEClient* client;
+  LTETLSClient* tlsclient;
+
   HttpClient* http_client;
+  HttpClient* http_file_client;
   
   uint8_t objectBuffer[OBJ_HEADER_SIZE+MAX_PAYLOAD_SIZE];
 

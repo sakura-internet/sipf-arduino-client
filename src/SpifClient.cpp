@@ -30,6 +30,13 @@ void SpifClient::begin(LTEClient* _client, int _port)
   
 }
 
+void SpifClient::begin(LTETLSClient* _client, int _port)
+{
+  tlsclient = _client;
+  port = _port;
+  
+}
+
 void SpifClient::end()
 {
 //  delete http_client;
@@ -37,7 +44,11 @@ void SpifClient::end()
 
 bool SpifClient::authorization()
 {
-  http_client = new HttpClient(*client, auth_server, port);
+  if(port == 80){
+    http_client = new HttpClient(*client, auth_server, port);
+  }else{
+    http_client = new HttpClient(*tlsclient, auth_server, port);  	
+  }
 
   http_client->post(auth_path);
 
@@ -61,15 +72,129 @@ bool SpifClient::authorization()
 
 //  delete http_client;
 
-  http_client = new HttpClient(*client, data_server, port);
+  if(port == 80){
+    http_client = new HttpClient(*client, data_server, port);
+  }else{
+    http_client = new HttpClient(*tlsclient, data_server, port);
+  }
+
+  if(port == 80){
+    http_file_client = new HttpClient(*client, file_server, port);
+  }else{
+    http_file_client = new HttpClient(*tlsclient, file_server, port);
+  }
 
   return true;
 };
 
+bool SpifClient::SipfFileRequestUploadURL(File& file, String filename)
+{
+
+  puts("upload a file.");
+  String url_name = String(file_path) + filename + String("/");
+
+  Serial.print("Url: ");
+  Serial.println(url_name);
+
+  http_file_client->beginRequest();
+  http_file_client->put(url_name);  
+  http_file_client->sendBasicAuth(user, pass);
+  http_file_client->endRequest();
+
+  // read the status code and body of the response
+  int statusCode = http_file_client->responseStatusCode();
+  String response = http_file_client->responseBody();
+
+  Serial.print("Status code: ");
+  Serial.println(statusCode);
+
+  http_file_client->stop();
+  delete http_file_client;
+	
+  if(statusCode != 200){
+    puts("error responce.");
+    return false;
+  }
+
+  Serial.print("Response: ");
+  Serial.println(response);
+
+  http_file_client = new HttpClient(*client, "content.sipf.iot.sakura.ad.jp", port);
+
+  int index = response.indexOf(".jp/");
+  String path = response.substring(index+4);
+  Serial.print("Path: ");
+  Serial.println(path);
+
+  int file_size = file.size();
+  Serial.print("size: ");
+  Serial.println(file_size);
+
+//  while(file_size > 0){
+
+    const int buffer_size = 1024*2;
+
+    uint8_t buf[buffer_size];
+    file.read(buf,buffer_size);
+
+    http_file_client->beginRequest();
+    http_file_client->put(path);
+    http_file_client->sendBasicAuth(user, pass);
+    http_file_client->sendHeader("Content-type: application/octet-stream");
+    http_file_client->sendHeader("Content-Length", buffer_size);
+
+    if(file_size > buffer_size){
+      file_size -= buffer_size;
+      http_file_client->sendHeader("Content-Length", buffer_size);
+      http_file_client->write(buf,buffer_size);
+    } else {
+      file_size = 0;
+      http_file_client->sendHeader("Content-Length", file_size);
+      http_file_client->write(buf,file_size);
+    }
+//  }
+
+  http_file_client->endRequest();
+
+  http_file_client->stop();
+  delete http_file_client;
+
+  http_file_client = new HttpClient(*client, "file.sipf.iot.sakura.ad.jp", port);
+
+  http_client->beginRequest();
+  url_name = String(file_path) + filename + String("/complete/");
+  http_client->endRequest();
+
+   // read the status code and body of the response
+  statusCode = http_file_client->responseStatusCode();
+  response = http_file_client->responseBody();
+
+  Serial.print("Status code: ");
+  Serial.println(statusCode);
+
+  if(statusCode != 200){
+    puts("error responce.");
+    http_file_client->stop();
+    delete http_file_client;
+    return false;
+  }
+
+  Serial.print("Response: ");
+  Serial.println(response);
+
+  return true;
+
+}
 
 bool SpifClient::upload(uint64_t utime, SipfObjectObject *objs, uint8_t obj_qty)
 {
-    puts("upload");
+  if(port == 80){
+    http_client = new HttpClient(*client, data_server, port);
+  }else{
+    http_client = new HttpClient(*tlsclient, data_server, port);
+  }
+
+  puts("upload objects.");
   String contentType = "Content-type: application/octet-stream";
 
   int packet_size = SipfObjectCreateObjUp(objectBuffer,utime,objs,obj_qty);
@@ -79,7 +204,7 @@ bool SpifClient::upload(uint64_t utime, SipfObjectObject *objs, uint8_t obj_qty)
     return false;
   }
 
-#if 1
+#if 0
   for(int i=0;i<packet_size;i++){
     printf("pac[%d] = %02x\n",i,objectBuffer[i]);
   }
@@ -87,7 +212,7 @@ bool SpifClient::upload(uint64_t utime, SipfObjectObject *objs, uint8_t obj_qty)
 #endif
 
   http_client->beginRequest();
-  http_client->post(data_path);  
+  http_client->post(data_path);
   http_client->sendBasicAuth(user, pass);
   http_client->sendHeader("Content-type: application/octet-stream");
   http_client->sendHeader("Content-Length", packet_size);
@@ -136,6 +261,9 @@ bool SpifClient::receiveResult(int64_t* otid)
     *otid |= objectBuffer[i+2] << (8*(7-i));
   }
 
+  http_client->stop();
+  delete http_client;
+
   return true;
 }
 
@@ -156,8 +284,8 @@ printf("payload_size=%d\n",payload_size);
   ptr[5] = 0xff & (utime >> (8*3));
   ptr[6] = 0xff & (utime >> (8*2));
   ptr[7] = 0xff & (utime >> (8*1));
-  ptr[8] = 0xff & utime;
-    
+  ptr[8] = 0xff & (utime >> (8*0));
+
   // OPTION_FLAG
   ptr[9] = 0x00;
     
