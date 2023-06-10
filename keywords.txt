@@ -47,9 +47,12 @@ OBJ_COMMAND_ERR		KEYWORD1
 # Methods and Functions (KEYWORD2)
 #######################################
 
-begin				KEYWORD2
-end					KEYWORD2
-authorization		KEYWORD2
-upload				KEYWORD2
-receiveResult		KEYWORD2
+begin					KEYWORD2
+end						KEYWORD2
+authenticate			KEYWORD2
+uploadObjects			KEYWORD2
+uploadFile				KEYWORD2
+requestFileUploadURL	KEYWORD2
+finalizeFileUpload		KEYWORD2
+uploadFileContent		KEYWORD2
 

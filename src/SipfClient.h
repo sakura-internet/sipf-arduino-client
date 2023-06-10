@@ -1,5 +1,5 @@
 /*
- *  SpifClient.h
+ *  SipfClient.h
  *  Author T.Hayakawa
  *
  *  This library is free software; you can redistribute it and/or
@@ -21,7 +21,6 @@
  *  prints it to the Serial monitor.
  */
 
-
 // libraries
 #include <String.h>
 #include <WString.h>
@@ -37,7 +36,7 @@
  * Ignore these parameters when setting LTE_NET_AUTHTYPE_NONE.
  */
 #define APP_LTE_USER_NAME "" // replace with your username
-#define APP_LTE_PASSWORD  "" // replace with your password
+#define APP_LTE_PASSWORD ""  // replace with your password
 
 // APN IP type
 #define APP_LTE_IP_TYPE (LTE_NET_IPTYPE_V4V6) // IP : IPv4v6
@@ -58,7 +57,6 @@
 #define APP_LTE_RAT (LTE_NET_RAT_CATM) // RAT : LTE-M (LTE Cat-M1)
 // #define APP_LTE_RAT (LTE_NET_RAT_NBIOT) // RAT : NB-IoT
 
-
 #define OBJ_MAX_CNT (255)
 
 #define OBJ_HEADER_SIZE 12
@@ -78,18 +76,19 @@
 #define OBJ_TYPE_BIN 0x10
 #define OBJ_TYPE_STR_UTF8 0x20
 
-#define OBJ_SIZE_UINT8   0x01
-#define OBJ_SIZE_INT8    0x01
-#define OBJ_SIZE_UINT16  0x02
-#define OBJ_SIZE_INT16   0x02
-#define OBJ_SIZE_UINT32  0x04
-#define OBJ_SIZE_INT32   0x04
-#define OBJ_SIZE_UINT64  0x08
-#define OBJ_SIZE_INT64   0x08
+#define OBJ_SIZE_UINT8 0x01
+#define OBJ_SIZE_INT8 0x01
+#define OBJ_SIZE_UINT16 0x02
+#define OBJ_SIZE_INT16 0x02
+#define OBJ_SIZE_UINT32 0x04
+#define OBJ_SIZE_INT32 0x04
+#define OBJ_SIZE_UINT64 0x08
+#define OBJ_SIZE_INT64 0x08
 #define OBJ_SIZE_FLOAT32 0x04
 #define OBJ_SIZE_FLOAT64 0x08
 
-typedef enum {
+typedef enum
+{
     OBJECTS_UP = 0x00,
     OBJECTS_UP_RETRY = 0x01,
     OBJID_NOTIFICATION = 0x02,
@@ -131,49 +130,50 @@ typedef struct
     uint8_t value[16];
 } SipfObjectOtid;
 
+const String auth_server = "auth.sipf.iot.sakura.ad.jp";
+const String auth_path = "/v0/session_key";
 
-const char auth_server[] = "auth.sipf.iot.sakura.ad.jp";
-const char auth_path[]   = "/v0/session_key";
+const String data_server = "da.sipf.iot.sakura.ad.jp";
+const String data_path = "/v0";
 
-const char data_server[] = "da.sipf.iot.sakura.ad.jp";
-const char data_path[]   = "/v0";
+const String file_server = "file.sipf.iot.sakura.ad.jp";
+const String file_path = "/v1/files/";
+const String file_comple = "/complete/";
 
-const char file_server[] = "file.sipf.iot.sakura.ad.jp";
-const char file_path[]   = "/v1/files/";
-const char file_comple[]   = "/complete/";
 
-class SpifClient
+class SipfClient
 {
 
 public:
+    void begin(LTEClient *, int);
+    void begin(LTETLSClient *, int);
+    void end();
 
-  void begin(LTEClient*, int);
-  void begin(LTETLSClient*, int);
-  void end();
+    bool authenticate();
 
-  bool authorization();
+    // File
+    bool uploadFile(String, uint8_t[], size_t);
+    String requestFileUploadURL(String);
+    bool finalizeFileUpload(String);
+    bool uploadFileContent(uint8_t[], size_t, String);
 
-  bool upload(uint64_t, SipfObjectObject*, uint8_t);
-  bool receiveResult(int64_t*);
-
-  bool SipfFileRequestUploadURL(File&, String);
+    // Object
+    uint64_t uploadObjects(uint64_t, SipfObjectObject *, uint8_t);
 
 private:
+    String user = "";
+    String pass = "";ˇ
 
-  String user;
-  String pass;
+    int port = 80; // port 80 is the default for HTTP
 
-  int port = 80; // port 80 is the default for HTTP
+    LTEClient *client = NULL;
+    LTETLSClient *tlsclient = NULL;
 
-  LTEClient* client;
-  LTETLSClient* tlsclient;
+    HttpClient *http_client = NULL;
 
-  HttpClient* http_client;
-  HttpClient* http_file_client;
-  
-  uint8_t objectBuffer[OBJ_HEADER_SIZE+MAX_PAYLOAD_SIZE];
+    uint8_t objectBuffer[OBJ_HEADER_SIZE + MAX_PAYLOAD_SIZE];
 
-  int SipfObjectCreateObjUpPayload(uint8_t *raw_buff, uint16_t sz_raw_buff, SipfObjectObject *objs, uint8_t obj_qty);
-  int SipfObjectCreateObjUp(uint8_t* ptr, uint64_t utime, SipfObjectObject *objs, uint8_t obj_qty);
-
+    void _setup_http_client(const String &, uint16_t);
+    int _build_objects_up(uint8_t *, uint64_t, SipfObjectObject *, uint8_t);
+    int _build_objects_up_payload(uint8_t *, uint16_t, SipfObjectObject *, uint8_t);
 };
