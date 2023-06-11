@@ -28,8 +28,3 @@ Tested with SPRESENSE + SPRESENSE LTE拡張ボード .
 
 ## Document
 
-
-## License
-
-[LGPL](http://www.gnu.org/licenses/lgpl.html)
-
