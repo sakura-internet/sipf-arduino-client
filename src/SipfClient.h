@@ -162,7 +162,7 @@ public:
 
 private:
     String user = "";
-    String pass = "";ˇ
+    String pass = "";
 
     int port = 80; // port 80 is the default for HTTP
 
