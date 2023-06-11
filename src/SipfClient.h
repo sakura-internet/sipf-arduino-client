@@ -21,6 +21,9 @@
  *  prints it to the Serial monitor.
  */
 
+#ifndef SIPF_CLIENT_H
+#define SIPF_CLIENT_H
+
 // libraries
 #include <String.h>
 #include <WString.h>
@@ -177,3 +180,5 @@ private:
     int _build_objects_up(uint8_t *, uint64_t, SipfObjectObject *, uint8_t);
     int _build_objects_up_payload(uint8_t *, uint16_t, SipfObjectObject *, uint8_t);
 };
+
+#endif // SIPF_CLIENT_H
