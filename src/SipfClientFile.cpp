@@ -1,33 +1,28 @@
 #include "SipfClient.h"
 
-bool SipfClient::uploadFile(String filename, uint8_t buf[], size_t size)
-{
+bool SipfClient::uploadFile(String filename, uint8_t buf[], size_t size) {
   // 1. Get uplaod URL
   String uploadURL = requestFileUploadURL(filename);
-  if (uploadURL == "")
-  {
+  if (uploadURL == "") {
     return false;
   }
 
   // 2. Uplaod content
   bool ret = uploadFileContent(buf, size, uploadURL);
-  if (!ret)
-  {
+  if (!ret) {
     return false;
   }
 
   // 3. Complete upload
   ret = finalizeFileUpload(filename);
-  if (!ret)
-  {
+  if (!ret) {
     return false;
   }
 
   return true;
 }
 
-String SipfClient::requestFileUploadURL(String filename)
-{
+String SipfClient::requestFileUploadURL(String filename) {
   puts("request upload a file");
   String url_name = String(file_path) + filename + String("/");
 
@@ -50,8 +45,7 @@ String SipfClient::requestFileUploadURL(String filename)
 
   http_client->stop();
 
-  if (statusCode != 200)
-  {
+  if (statusCode != 200) {
     puts("error responce.");
     return "";
   }
@@ -60,8 +54,7 @@ String SipfClient::requestFileUploadURL(String filename)
   return response;
 }
 
-bool SipfClient::finalizeFileUpload(String filename)
-{
+bool SipfClient::finalizeFileUpload(String filename) {
   puts("request complete upload");
   String url_name = String(file_path) + filename + String("/complete/");
 
@@ -84,8 +77,7 @@ bool SipfClient::finalizeFileUpload(String filename)
 
   http_client->stop();
 
-  if (statusCode != 200)
-  {
+  if (statusCode != 200) {
     puts("error responce.");
     return false;
   }
@@ -93,8 +85,7 @@ bool SipfClient::finalizeFileUpload(String filename)
   return true;
 }
 
-bool SipfClient::uploadFileContent(uint8_t buf[], size_t size, String url)
-{
+bool SipfClient::uploadFileContent(uint8_t buf[], size_t size, String url) {
 
   int host_index = url.indexOf("://");
   String host = url.substring(host_index + 3);
@@ -116,11 +107,9 @@ bool SipfClient::uploadFileContent(uint8_t buf[], size_t size, String url)
 
   uint8_t *sp = buf;
   size_t sent = 0;
-  while (sent < size)
-  {
+  while (sent < size) {
     size_t sending = size - sent;
-    if (sending > 1024)
-    {
+    if (sending > 1024) {
       sending = 1024;
     }
     http_client->write(sp, sending);
