@@ -129,3 +129,113 @@ int SipfClient::_build_objects_up_payload(uint8_t *raw_buff, uint16_t sz_raw_buf
   }
   return idx_raw_buff;  // バッファに書いたデータ長を返す
 }
+
+//
+// 64bitデータのバイトスワップ
+//
+static uint64_t bswap64(uint64_t value) {
+  return ((value >> 56) & 0x00000000000000FF) | ((value >> 40) & 0x000000000000FF00) | ((value >> 24) & 0x0000000000FF0000) | ((value >> 8) & 0x00000000FF000000) | ((value << 8) & 0x000000FF00000000) | ((value << 24) & 0x0000FF0000000000) | ((value << 40) & 0x00FF000000000000) | ((value << 56) & 0xFF00000000000000);
+}
+
+//
+// COMMAND_TYPE_OBJECTS_DOWN_REQUESTを送信し、COMMAND_TYPE_OBJECTS_DOWNを受信する。戻り値は、受信したオブジェクト群のデータのbyte数を返す。
+//
+uint64_t SipfClient::downloadObjects(uint64_t utime, SipfObjectDown *objDown) {
+  _setup_http_client(data_server, 80);
+
+  // 要求(COMMAND_TYPE_DOWN_REQUEST)を送信
+  int packet_size = _build_objects_down_request(objectBuffer, utime);
+
+  http_client->beginRequest();
+  http_client->post(data_path);
+  http_client->sendBasicAuth(user, pass);
+  http_client->sendHeader("Content-type: application/octet-stream");
+  http_client->sendHeader("Content-Length", packet_size);
+  http_client->write(objectBuffer, packet_size);
+  http_client->endRequest();
+
+  int statusCode = http_client->responseStatusCode();
+  if (statusCode < 200 || 299 < statusCode) {
+    printf("error, responseStatusCode (%d)", statusCode);
+    return 0;
+  }
+
+  // 応答(COMMAND_TYPE_OBJECTS_DOWN)の解析
+  packet_size = http_client->read(objectBuffer, http_client->contentLength());
+  /*
+    printf("packet_size=%d\n", packet_size);
+    for (uint8_t i = 0; i < packet_size; i++)
+    {
+        printf("0x%02x ", objectBuffer[i]);
+    }
+    printf("\n");
+*/
+  if (objectBuffer[0] != OBJECTS_DOWN) {
+    printf("error, COMMAND_TYPE (0x%02X)", objectBuffer[0]);
+    return 0;
+  }
+
+  int payload_length = (objectBuffer[10] << 8 | objectBuffer[11]);
+  if (payload_length < OBJ_DOWN_PAYLOAD_SIZE_MIN) {
+    printf("error, payload_length (%d)\n", payload_length);
+    return 0;
+  }
+
+  int i = OBJ_HEADER_SIZE;
+
+  objDown->down_request_result = objectBuffer[i];
+  i += sizeof(objDown->down_request_result);
+
+  memcpy(&objDown->otid, &objectBuffer[i], sizeof(objDown->otid));
+  i += sizeof(objDown->otid);
+
+  memcpy(&objDown->timestamp_src, &objectBuffer[i], sizeof(objDown->timestamp_src));
+  objDown->timestamp_src = bswap64(objDown->timestamp_src);
+  i += sizeof(objDown->timestamp_src);
+
+  memcpy(&objDown->timestamp_platfrom_from_src, &objectBuffer[i], sizeof(objDown->timestamp_platfrom_from_src));
+  objDown->timestamp_platfrom_from_src = bswap64(objDown->timestamp_platfrom_from_src);
+  i += sizeof(objDown->timestamp_platfrom_from_src);
+
+  objDown->remains = objectBuffer[i];
+  i += sizeof(objDown->remains);
+
+  i += 1;  // RESERVED 1byte
+
+  int objDataLength = packet_size - (OBJ_HEADER_SIZE + OBJ_DOWN_PAYLOAD_SIZE_MIN);
+  objDown->objects_data = &objectBuffer[i];
+
+  http_client->stop();
+
+  return objDataLength;
+}
+
+//
+// COMMAND_TYPE_OBJECTS_DOWN_REQUESTのデータを組立
+//
+int SipfClient::_build_objects_down_request(uint8_t *ptr, uint64_t utime) {
+  // COMMAND_TYPE
+  ptr[0] = (uint8_t)OBJECTS_DOWN_REQUEST;
+
+  // COMMAND_TIME
+  ptr[1] = 0xff & (utime >> (8 * 7));
+  ptr[2] = 0xff & (utime >> (8 * 6));
+  ptr[3] = 0xff & (utime >> (8 * 5));
+  ptr[4] = 0xff & (utime >> (8 * 4));
+  ptr[5] = 0xff & (utime >> (8 * 3));
+  ptr[6] = 0xff & (utime >> (8 * 2));
+  ptr[7] = 0xff & (utime >> (8 * 1));
+  ptr[8] = 0xff & (utime >> (8 * 0));
+
+  // OPTION_FLAG
+  ptr[9] = 0x00;
+
+  // PAYLOAD_LENGTH
+  ptr[10] = 0x00;
+  ptr[11] = 0x01;
+
+  // PAYLOAD
+  ptr[12] = 0x00;  // RESERVED 1byte
+
+  return (OBJ_HEADER_SIZE + 1);
+}

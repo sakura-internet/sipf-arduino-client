@@ -1,3 +1,4 @@
+#include "stdint.h"
 /*
  *  SipfClient.h
  *  Author T.Hayakawa
@@ -64,6 +65,8 @@
 
 #define OBJ_HEADER_SIZE 12
 #define MAX_PAYLOAD_SIZE 1024
+
+#define OBJ_DOWN_PAYLOAD_SIZE_MIN 35
 
 #define OBJ_TYPE_UINT8 0x00
 #define OBJ_TYPE_INT8 0x01
@@ -132,6 +135,16 @@ typedef struct
   uint8_t value[16];
 } SipfObjectOtid;
 
+typedef struct
+{
+  uint8_t down_request_result;
+  SipfObjectOtid otid;
+  uint64_t timestamp_src;
+  uint64_t timestamp_platfrom_from_src;
+  uint8_t remains;
+  uint8_t *objects_data;
+} SipfObjectDown;
+
 const String auth_server = "auth.sipf.iot.sakura.ad.jp";
 const String auth_path = "/v0/session_key";
 
@@ -158,8 +171,14 @@ public:
   bool finalizeFileUpload(String);
   bool uploadFileContent(uint8_t[], size_t, String);
 
+  uint64_t downloadFile(String, uint8_t[], size_t);
+  String requestFileDownloadURL(String);
+  uint64_t downloadFileContent(uint8_t[], size_t, String);
+
+
   // Object
   uint64_t uploadObjects(uint64_t, SipfObjectObject *, uint8_t);
+  uint64_t downloadObjects(uint64_t, SipfObjectDown *);
 
 private:
   String user = "";
@@ -177,6 +196,7 @@ private:
   void _setup_http_client(const String &, uint16_t);
   int _build_objects_up(uint8_t *, uint64_t, SipfObjectObject *, uint8_t);
   int _build_objects_up_payload(uint8_t *, uint16_t, SipfObjectObject *, uint8_t);
+  int _build_objects_down_request(uint8_t *ptr, uint64_t utime);
 };
 
 #endif  // SIPF_CLIENT_H
