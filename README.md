@@ -6,7 +6,6 @@
 
 Tested with SPRESENSE + SPRESENSE LTE拡張ボード .
 
-
 ## Features
 
 *NOTE: The TLS connection has not been tested.*
@@ -14,13 +13,9 @@ Tested with SPRESENSE + SPRESENSE LTE拡張ボード .
 ### Supported
 
 * オブジェクト送信
-* ファイル送信
-
-### Not implemented
-
 * オブジェクト受信
+* ファイル送信
 * ファイル受信
-
 
 ## Requirement
 
