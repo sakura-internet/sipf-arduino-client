@@ -23,42 +23,33 @@
 
 #include "SipfClient.h"
 
-void SipfClient::begin(LTEClient *_client, int _port)
-{
+void SipfClient::begin(LTEClient *_client, int _port) {
   client = _client;
   port = _port;
 }
 
-void SipfClient::begin(LTETLSClient *_client, int _port)
-{
+void SipfClient::begin(LTETLSClient *_client, int _port) {
   tlsclient = _client;
   port = _port;
 }
 
-void SipfClient::end()
-{
+void SipfClient::end() {
 }
 
-void SipfClient::_setup_http_client(const String &aServerName, uint16_t aServerPort)
-{
-  if (http_client != NULL)
-  {
+void SipfClient::_setup_http_client(const String &aServerName, uint16_t aServerPort) {
+  if (http_client != NULL) {
     delete http_client;
     http_client = NULL;
   }
 
-  if (client != NULL)
-  {
+  if (client != NULL) {
     http_client = new HttpClient(*client, aServerName, aServerPort);
-  }
-  else
-  {
+  } else {
     http_client = new HttpClient(*tlsclient, aServerName, aServerPort);
   }
 }
 
-bool SipfClient::authenticate()
-{
+bool SipfClient::authenticate() {
   _setup_http_client(auth_server, port);
 
   http_client->post(auth_path);
@@ -69,13 +60,11 @@ bool SipfClient::authenticate()
 
   Serial.print("Status code: ");
   Serial.println(statusCode);
-  if (statusCode < 200 || 299 < statusCode)
-  {
+  if (statusCode < 200 || 299 < statusCode) {
     return false;
   }
 
-  if (response == "")
-  {
+  if (response == "") {
     return false;
   }
 

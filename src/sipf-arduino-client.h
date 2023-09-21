@@ -3,4 +3,4 @@
 
 #include "SipfClient.h"
 
-#endif //SIPF_ARDUINO_CLIENT_H
+#endif  //SIPF_ARDUINO_CLIENT_H
